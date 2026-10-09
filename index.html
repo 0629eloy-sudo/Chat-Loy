@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -108,5 +107,182 @@ function tab(button,name){
  if(name!=='Home')notify(name+' 页面会在后续版本开发。');
 }
 </script>
+
+<style>
+.asset-app{max-width:760px;margin:25px auto;padding:22px 18px;color:#f4f6f2;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.asset-app *{box-sizing:border-box}
+.asset-app .asset-card{background:#121414;border:1px solid #292e2b;border-radius:20px;padding:20px;margin:15px 0}
+.asset-app .asset-label{font-size:12px;color:#929b93}
+.asset-app .asset-total{font-size:34px;font-weight:750;margin:12px 0;color:#c5fa65;overflow-wrap:anywhere}
+.asset-app input,.asset-app select{width:100%;background:#090b0a;border:1px solid #333a34;border-radius:12px;padding:13px;color:#f4f6f2;font-size:16px;margin-top:7px}
+.asset-app label{display:block;color:#b7beb8;font-size:12px;margin-top:15px}
+.asset-app .asset-add{width:100%;margin-top:18px;background:#c5fa65;color:#111;border:0;border-radius:12px;padding:14px;font-weight:750;font-size:15px}
+.asset-app .asset-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #292e2b;padding:14px 0}
+.asset-app .asset-row:last-child{border-bottom:0}
+.asset-app .asset-name{font-size:14px;font-weight:650;overflow-wrap:anywhere}
+.asset-app .asset-type{font-size:11px;color:#929b93;margin-top:5px}
+.asset-app .asset-value{font-weight:650;text-align:right;overflow-wrap:anywhere}
+.asset-app .asset-delete{margin-top:6px;border:0;background:transparent;color:#f18d83;font-size:12px;padding:5px}
+.asset-app .asset-note{font-size:11px;color:#858d87;line-height:1.6;margin-top:15px}
+</style>
+
+<section class="asset-app">
+  <div class="eyebrow">YOUR WEALTH</div>
+  <h1 style="font-size:29px;margin:12px 0">My <em style="color:#c5fa65">Assets.</em></h1>
+
+  <div class="asset-card">
+    <div class="asset-label">TOTAL RECORDED ASSETS · DEMO</div>
+    <div class="asset-total" id="myAssetTotal">$0.00</div>
+    <div class="asset-label" id="myAssetCount">0 assets recorded</div>
+  </div>
+
+  <div class="asset-card">
+    <h2 style="margin:0 0 10px;font-size:18px">Add an asset</h2>
+    <form id="myAssetForm">
+      <label for="myAssetName">Asset name</label>
+      <input id="myAssetName" maxlength="60" placeholder="e.g. Cash, Apple shares" required>
+
+      <label for="myAssetType">Asset type</label>
+      <select id="myAssetType">
+        <option>Cash</option>
+        <option>Stocks</option>
+        <option>Crypto</option>
+        <option>Gold</option>
+        <option>Other</option>
+      </select>
+
+      <label for="myAssetAmount">Value (USD)</label>
+      <input id="myAssetAmount" type="number" min="0.01" max="999999999" step="0.01" placeholder="e.g. 500" required>
+
+      <button class="asset-add" type="submit">+ Add asset</button>
+    </form>
+  </div>
+
+  <div class="asset-card">
+    <h2 style="margin:0 0 8px;font-size:18px">My asset list</h2>
+    <div id="myAssetList"></div>
+    <p class="asset-note">Saved on this browser only. Values are entered manually, not live prices. Avoid entering sensitive account details. Clearing browser data may erase these records.</p>
+  </div>
+</section>
+
+<script>
+(function(){
+  const storageKey = "chatloy_asset_records_v1";
+  let records = [];
+
+  try {
+    const saved = localStorage.getItem(storageKey);
+    const parsed = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(parsed)) {
+      records = parsed.filter(x =>
+        x && typeof x.name === "string" &&
+        typeof x.type === "string" &&
+        Number.isFinite(x.amount) && x.amount > 0
+      );
+    }
+  } catch(e) {
+    records = [];
+  }
+
+  const form = document.getElementById("myAssetForm");
+  const list = document.getElementById("myAssetList");
+  const total = document.getElementById("myAssetTotal");
+  const count = document.getElementById("myAssetCount");
+
+  function money(value) {
+    return "$" + value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(records));
+      return true;
+    } catch(e) {
+      alert("Unable to save on this device. Check browser storage settings.");
+      return false;
+    }
+  }
+
+  function render() {
+    total.textContent = money(records.reduce((sum, item) => sum + item.amount, 0));
+    count.textContent = records.length + (records.length === 1 ? " asset recorded" : " assets recorded");
+    list.replaceChildren();
+
+    if (records.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "asset-note";
+      empty.textContent = "No assets yet. Add your first record above.";
+      list.appendChild(empty);
+      return;
+    }
+
+    records.forEach((item, index) => {
+      const row = document.createElement("div");
+      row.className = "asset-row";
+
+      const info = document.createElement("div");
+      const name = document.createElement("div");
+      name.className = "asset-name";
+      name.textContent = item.name;
+
+      const type = document.createElement("div");
+      type.className = "asset-type";
+      type.textContent = item.type;
+
+      info.append(name, type);
+
+      const right = document.createElement("div");
+      right.style.textAlign = "right";
+
+      const value = document.createElement("div");
+      value.className = "asset-value";
+      value.textContent = money(item.amount);
+
+      const del = document.createElement("button");
+      del.className = "asset-delete";
+      del.type = "button";
+      del.textContent = "Delete";
+      del.addEventListener("click", function() {
+        if (confirm("Delete this asset record?")) {
+          const old = records;
+          records = records.filter((_, i) => i !== index);
+          if (save()) render();
+          else records = old;
+        }
+      });
+
+      right.append(value, del);
+      row.append(info, right);
+      list.appendChild(row);
+    });
+  }
+
+  form.addEventListener("submit", function(event) {
+    event.preventDefault();
+    const name = document.getElementById("myAssetName").value.trim();
+    const type = document.getElementById("myAssetType").value;
+    const amount = Number(document.getElementById("myAssetAmount").value);
+
+    if (!name || !Number.isFinite(amount) || amount <= 0 || amount > 999999999) {
+      alert("Enter an asset name and a valid positive amount.");
+      return;
+    }
+
+    records.push({name, type, amount});
+    if (save()) {
+      form.reset();
+      render();
+    } else {
+      records.pop();
+    }
+  });
+
+  render();
+})();
+</script>
+
 </body>
 </html>
