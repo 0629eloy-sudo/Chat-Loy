@@ -306,4 +306,31 @@ footer { text-align:center; color:#626a63; font-size:11px; padding:20px; }
 })();
 </script>
 </body>
+<script>
+(function () {
+  const total = document.getElementById("myAssetTotal");
+  const list = document.getElementById("myAssetList");
+
+  if (!total || !list) return;
+
+  function updateTotal() {
+    let sum = 0;
+    const values = list.querySelectorAll(".asset-value");
+
+    values.forEach(function (item) {
+      const number = Number(item.textContent.replace(/[$,]/g, ""));
+      if (Number.isFinite(number)) sum += number;
+    });
+
+    total.textContent = "$" + sum.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  const observer = new MutationObserver(updateTotal);
+  observer.observe(list, { childList: true, subtree: true, characterData: true });
+  updateTotal();
+})();
+</script>  
 </html>
